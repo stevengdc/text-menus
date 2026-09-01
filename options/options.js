@@ -61,6 +61,7 @@ let editingNode = null;
 let editorMode = "text";
 let htmlView = "visual";
 let editorDirty = false;
+let savedEditorRange = null;
 
 function id() {
   return "node_" + crypto.randomUUID();
@@ -88,7 +89,7 @@ function normalizeContentTypes(nodes) {
 
 function sanitizeHtml(value) {
   const allowedTags = new Set([
-    "P", "BR", "STRONG", "B", "EM", "I", "U", "S", "UL", "OL", "LI",
+    "P", "BR", "STRONG", "B", "EM", "I", "U", "S", "FONT", "IMG", "UL", "OL", "LI",
     "A", "BLOCKQUOTE", "H1", "H2", "H3", "DIV", "SPAN", "TABLE", "THEAD",
     "TBODY", "TR", "TH", "TD"
   ]);
@@ -101,16 +102,37 @@ function sanitizeHtml(value) {
       continue;
     }
 
-    for (const attribute of [...element.attributes]) {
-      const keepLink = element.tagName === "A" && ["href", "title"].includes(attribute.name);
-      if (!keepLink) element.removeAttribute(attribute.name);
-    }
+    const attributes = Object.fromEntries([...element.attributes].map(attribute => [attribute.name, attribute.value]));
+    for (const attribute of [...element.attributes]) element.removeAttribute(attribute.name);
 
     if (element.tagName === "A") {
-      const href = element.getAttribute("href") || "";
-      if (!/^(https?:|mailto:|tel:|#)/i.test(href)) element.removeAttribute("href");
+      const href = attributes.href || "";
+      if (/^(https?:|mailto:|tel:|#)/i.test(href)) element.setAttribute("href", href);
+      if (attributes.title) element.setAttribute("title", attributes.title.slice(0, 200));
       element.setAttribute("target", "_blank");
       element.setAttribute("rel", "noopener noreferrer");
+    }
+
+    if (element.tagName === "FONT") {
+      if (/^#[0-9a-f]{6}$/i.test(attributes.color || "")) element.setAttribute("color", attributes.color);
+      if (/^[\w -]{1,40}$/.test(attributes.face || "")) element.setAttribute("face", attributes.face);
+      if (/^[1-7]$/.test(attributes.size || "")) element.setAttribute("size", attributes.size);
+    }
+
+    if (element.tagName === "IMG") {
+      const src = attributes.src || "";
+      if (/^https:\/\//i.test(src) || /^data:image\/(png|jpeg|gif|webp);base64,/i.test(src)) {
+        element.setAttribute("src", src);
+        element.setAttribute("alt", (attributes.alt || "Imagem").slice(0, 200));
+      } else {
+        element.remove();
+        continue;
+      }
+    }
+
+    if (["P", "DIV", "H1", "H2", "H3", "TH", "TD"].includes(element.tagName)) {
+      const aligned = attributes.align || attributes.style?.match(/text-align\s*:\s*(left|center|right|justify)/i)?.[1];
+      if (/^(left|center|right|justify)$/i.test(aligned || "")) element.setAttribute("align", aligned.toLowerCase());
     }
   }
 
@@ -125,6 +147,21 @@ function contentSummary(node) {
     return template.content.textContent.trim().replace(/\s+/g, " ") || "HTML sem texto visível";
   }
   return node.text.trim().replace(/\s+/g, " ") || "Sem conteúdo";
+}
+
+function rememberVisualSelection() {
+  const selection = window.getSelection();
+  if (!selection?.rangeCount) return;
+  const range = selection.getRangeAt(0);
+  if (visualEditor.contains(range.commonAncestorContainer)) savedEditorRange = range.cloneRange();
+}
+
+function restoreVisualSelection() {
+  visualEditor.focus();
+  if (!savedEditorRange) return;
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(savedEditorRange);
 }
 
 function setEditorMode(mode) {
@@ -627,18 +664,42 @@ document.getElementById("sourceTab").addEventListener("click", () => setHtmlView
 
 document.querySelectorAll(".format-toolbar [data-command]").forEach(button => {
   button.addEventListener("click", () => {
-    visualEditor.focus();
+    restoreVisualSelection();
     document.execCommand(button.dataset.command, false);
+    rememberVisualSelection();
     editorDirty = true;
   });
 });
 
 document.querySelectorAll(".format-toolbar [data-block]").forEach(button => {
   button.addEventListener("click", () => {
-    visualEditor.focus();
+    restoreVisualSelection();
     document.execCommand("formatBlock", false, button.dataset.block);
+    rememberVisualSelection();
     editorDirty = true;
   });
+});
+
+document.querySelectorAll(".format-toolbar button").forEach(button => {
+  button.addEventListener("mousedown", event => event.preventDefault());
+});
+
+document.getElementById("fontName").addEventListener("change", event => {
+  restoreVisualSelection();
+  document.execCommand("fontName", false, event.target.value);
+  editorDirty = true;
+});
+
+document.getElementById("fontSize").addEventListener("change", event => {
+  restoreVisualSelection();
+  document.execCommand("fontSize", false, event.target.value);
+  editorDirty = true;
+});
+
+document.getElementById("textColor").addEventListener("input", event => {
+  restoreVisualSelection();
+  document.execCommand("foreColor", false, event.target.value);
+  editorDirty = true;
 });
 
 document.getElementById("createLink").addEventListener("click", () => {
@@ -648,9 +709,53 @@ document.getElementById("createLink").addEventListener("click", () => {
     alert("Use um endereço iniciado por https://, http://, mailto: ou tel:.");
     return;
   }
-  visualEditor.focus();
+  restoreVisualSelection();
   document.execCommand("createLink", false, url);
+  rememberVisualSelection();
   editorDirty = true;
+});
+
+document.getElementById("insertTable").addEventListener("click", () => {
+  const rows = Number(prompt("Número de linhas da tabela (1 a 10):", "2"));
+  if (!Number.isInteger(rows) || rows < 1 || rows > 10) return;
+  const columns = Number(prompt("Número de colunas da tabela (1 a 10):", "2"));
+  if (!Number.isInteger(columns) || columns < 1 || columns > 10) return;
+
+  const cells = () => `<tr>${"<td>&nbsp;</td>".repeat(columns)}</tr>`;
+  const table = `<table><tbody>${Array.from({ length: rows }, cells).join("")}</tbody></table><p><br></p>`;
+  restoreVisualSelection();
+  document.execCommand("insertHTML", false, table);
+  rememberVisualSelection();
+  editorDirty = true;
+});
+
+document.getElementById("insertImage").addEventListener("click", () => {
+  rememberVisualSelection();
+  document.getElementById("imageFile").click();
+});
+
+document.getElementById("imageFile").addEventListener("change", event => {
+  const [file] = event.target.files;
+  event.target.value = "";
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) {
+    alert("A imagem deve ter no máximo 2 MB para não tornar o backup demasiado grande.");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    restoreVisualSelection();
+    document.execCommand("insertImage", false, reader.result);
+    rememberVisualSelection();
+    editorDirty = true;
+    editorStatus.textContent = "Imagem inserida — alterações por guardar";
+  });
+  reader.readAsDataURL(file);
+});
+
+["mouseup", "keyup", "input"].forEach(eventName => {
+  visualEditor.addEventListener(eventName, rememberVisualSelection);
 });
 
 [plainEditor, visualEditor, sourceEditor].forEach(editor => {

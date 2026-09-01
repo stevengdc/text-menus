@@ -82,10 +82,12 @@
         <input class="title-input" placeholder="Nome do item">
         <span class="type-badge item-badge content-type-badge">TEXTO</span>
         <span class="content-preview" title="Resumo do conteúdo"></span>
-        <button class="edit-content small primary">Editar conteúdo</button>
-        <button class="move-up icon-button" title="Mover para cima" aria-label="Mover para cima">↑</button>
-        <button class="move-down icon-button" title="Mover para baixo" aria-label="Mover para baixo">↓</button>
-        <button class="delete small danger">Apagar</button>
+        <div class="item-actions">
+          <button class="edit-content small primary">Editar conteúdo</button>
+          <button class="move-up icon-button" title="Mover para cima" aria-label="Mover para cima">↑</button>
+          <button class="move-down icon-button" title="Mover para baixo" aria-label="Mover para baixo">↓</button>
+          <button class="delete small danger">Apagar</button>
+        </div>
       </div>
     </div>
   </template>
@@ -115,14 +117,44 @@
         </div>
         <div id="visualPanel">
           <div class="format-toolbar" role="toolbar" aria-label="Formatação de texto">
-            <button data-command="bold" title="Negrito"><strong>B</strong></button>
-            <button data-command="italic" title="Itálico"><em>I</em></button>
-            <button data-command="underline" title="Sublinhado"><u>U</u></button>
-            <button data-command="insertUnorderedList" title="Lista com marcadores">• Lista</button>
-            <button data-command="insertOrderedList" title="Lista numerada">1. Lista</button>
-            <button data-block="p" title="Parágrafo">Parágrafo</button>
-            <button data-block="h2" title="Título">Título</button>
-            <button id="createLink" title="Adicionar ligação">Ligação</button>
+            <div class="toolbar-group">
+              <label class="sr-only" for="fontName">Fonte</label>
+              <select id="fontName" title="Fonte">
+                <option value="Arial">Arial</option><option value="Calibri">Calibri</option>
+                <option value="Georgia">Georgia</option><option value="Tahoma">Tahoma</option>
+                <option value="Times New Roman">Times New Roman</option><option value="Verdana">Verdana</option>
+              </select>
+              <label class="sr-only" for="fontSize">Tamanho</label>
+              <select id="fontSize" title="Tamanho do texto">
+                <option value="2">Pequeno</option><option value="3" selected>Normal</option>
+                <option value="4">Grande</option><option value="5">Muito grande</option>
+              </select>
+            </div>
+            <div class="toolbar-group">
+              <button data-command="bold" title="Negrito"><strong>B</strong></button>
+              <button data-command="italic" title="Itálico"><em>I</em></button>
+              <button data-command="underline" title="Sublinhado"><u>U</u></button>
+              <button data-command="strikeThrough" title="Rasurado"><s>S</s></button>
+              <label class="color-control" title="Cor do texto"><span>A</span><input id="textColor" type="color" value="#202124" aria-label="Cor do texto"></label>
+            </div>
+            <div class="toolbar-group">
+              <button data-command="insertUnorderedList" title="Lista com marcadores">• Lista</button>
+              <button data-command="insertOrderedList" title="Lista numerada">1. Lista</button>
+              <button data-block="p" title="Parágrafo">Parágrafo</button>
+              <button data-block="h2" title="Título">Título</button>
+            </div>
+            <div class="toolbar-group">
+              <button data-command="justifyLeft" title="Alinhar à esquerda">≡←</button>
+              <button data-command="justifyCenter" title="Centrar">≡</button>
+              <button data-command="justifyRight" title="Alinhar à direita">→≡</button>
+              <button data-command="justifyFull" title="Justificar">☰</button>
+            </div>
+            <div class="toolbar-group">
+              <button id="createLink" title="Adicionar ligação">Ligação</button>
+              <button id="insertTable" title="Inserir tabela">Tabela</button>
+              <button id="insertImage" title="Inserir imagem do computador">Imagem</button>
+              <input id="imageFile" type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden>
+            </div>
           </div>
           <div id="visualEditor" class="visual-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Escreva e formate o conteúdo..."></div>
         </div>
