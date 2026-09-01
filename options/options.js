@@ -43,10 +43,24 @@ const generalTitle = document.getElementById("generalTitle");
 const rootDropZone = document.getElementById("rootDropZone");
 const backupFile = document.getElementById("backupFile");
 const helpDialog = document.getElementById("helpDialog");
+const contentEditor = document.getElementById("contentEditor");
+const editorItemName = document.getElementById("editorItemName");
+const plainEditorPanel = document.getElementById("plainEditorPanel");
+const htmlEditorPanel = document.getElementById("htmlEditorPanel");
+const plainEditor = document.getElementById("plainEditor");
+const visualEditor = document.getElementById("visualEditor");
+const sourceEditor = document.getElementById("sourceEditor");
+const visualPanel = document.getElementById("visualPanel");
+const sourcePanel = document.getElementById("sourcePanel");
+const editorStatus = document.getElementById("editorStatus");
 
 let config = null;
 let saveTimer = null;
 const collapsedNodes = new Set();
+let editingNode = null;
+let editorMode = "text";
+let htmlView = "visual";
+let editorDirty = false;
 
 function id() {
   return "node_" + crypto.randomUUID();
@@ -59,6 +73,122 @@ function notify(message) {
   notify.timer = setTimeout(() => toast.classList.remove("show"), 1800);
 }
 
+function looksLikeHtml(value) {
+  return typeof value === "string" && /<\/?[a-z][\s\S]*>/i.test(value);
+}
+
+function normalizeContentTypes(nodes) {
+  for (const node of nodes || []) {
+    if (node.type === "item" && !["text", "html"].includes(node.contentType)) {
+      node.contentType = looksLikeHtml(node.text) ? "html" : "text";
+    }
+    if (node.children) normalizeContentTypes(node.children);
+  }
+}
+
+function sanitizeHtml(value) {
+  const allowedTags = new Set([
+    "P", "BR", "STRONG", "B", "EM", "I", "U", "S", "UL", "OL", "LI",
+    "A", "BLOCKQUOTE", "H1", "H2", "H3", "DIV", "SPAN", "TABLE", "THEAD",
+    "TBODY", "TR", "TH", "TD"
+  ]);
+  const template = document.createElement("template");
+  template.innerHTML = String(value || "");
+
+  for (const element of [...template.content.querySelectorAll("*")]) {
+    if (!allowedTags.has(element.tagName)) {
+      element.replaceWith(...element.childNodes);
+      continue;
+    }
+
+    for (const attribute of [...element.attributes]) {
+      const keepLink = element.tagName === "A" && ["href", "title"].includes(attribute.name);
+      if (!keepLink) element.removeAttribute(attribute.name);
+    }
+
+    if (element.tagName === "A") {
+      const href = element.getAttribute("href") || "";
+      if (!/^(https?:|mailto:|tel:|#)/i.test(href)) element.removeAttribute("href");
+      element.setAttribute("target", "_blank");
+      element.setAttribute("rel", "noopener noreferrer");
+    }
+  }
+
+  return template.innerHTML;
+}
+
+function contentSummary(node) {
+  if (!node.text) return "Sem conteúdo";
+  if (node.contentType === "html") {
+    const template = document.createElement("template");
+    template.innerHTML = sanitizeHtml(node.text);
+    return template.content.textContent.trim().replace(/\s+/g, " ") || "HTML sem texto visível";
+  }
+  return node.text.trim().replace(/\s+/g, " ") || "Sem conteúdo";
+}
+
+function setEditorMode(mode) {
+  editorMode = mode;
+  document.getElementById("plainMode").classList.toggle("active", mode === "text");
+  document.getElementById("htmlMode").classList.toggle("active", mode === "html");
+  plainEditorPanel.hidden = mode !== "text";
+  htmlEditorPanel.hidden = mode !== "html";
+  editorDirty = true;
+}
+
+function setHtmlView(view) {
+  if (view === "source") {
+    sourceEditor.value = sanitizeHtml(visualEditor.innerHTML);
+  } else {
+    visualEditor.innerHTML = sanitizeHtml(sourceEditor.value);
+  }
+
+  htmlView = view;
+  visualPanel.hidden = view !== "visual";
+  sourcePanel.hidden = view !== "source";
+  document.getElementById("visualTab").classList.toggle("active", view === "visual");
+  document.getElementById("sourceTab").classList.toggle("active", view === "source");
+  document.getElementById("visualTab").setAttribute("aria-selected", String(view === "visual"));
+  document.getElementById("sourceTab").setAttribute("aria-selected", String(view === "source"));
+}
+
+function openContentEditor(node) {
+  editingNode = node;
+  editorItemName.textContent = node.title || "Texto sem nome";
+  plainEditor.value = node.contentType === "text" ? node.text || "" : "";
+  const html = node.contentType === "html" ? sanitizeHtml(node.text) : "";
+  visualEditor.innerHTML = html;
+  sourceEditor.value = html;
+  editorMode = node.contentType || "text";
+  editorDirty = false;
+  setEditorMode(editorMode);
+  editorDirty = false;
+  setHtmlView("visual");
+  editorStatus.textContent = "";
+  contentEditor.showModal();
+}
+
+function closeContentEditor() {
+  if (editorDirty && !confirm("Fechar sem guardar as alterações ao conteúdo?")) return;
+  editorDirty = false;
+  editingNode = null;
+  contentEditor.close();
+}
+
+async function saveContentEditor() {
+  if (!editingNode) return;
+  editingNode.contentType = editorMode;
+  editingNode.text = editorMode === "text"
+    ? plainEditor.value
+    : sanitizeHtml(htmlView === "source" ? sourceEditor.value : visualEditor.innerHTML);
+  editorDirty = false;
+  await save();
+  contentEditor.close();
+  editingNode = null;
+  render();
+  notify("Conteúdo guardado");
+}
+
 function isValidNode(node, ids) {
   if (!node || typeof node !== "object" || Array.isArray(node)) return false;
   if (typeof node.id !== "string" || !node.id || ids.has(node.id)) return false;
@@ -67,7 +197,8 @@ function isValidNode(node, ids) {
   ids.add(node.id);
 
   if (node.type === "item") {
-    return typeof node.text === "string";
+    return typeof node.text === "string" &&
+      (node.contentType === undefined || ["text", "html"].includes(node.contentType));
   }
 
   return Array.isArray(node.children) && node.children.every(child => isValidNode(child, ids));
@@ -118,6 +249,7 @@ async function importBackup(file) {
 
     clearTimeout(saveTimer);
     config = structuredClone(importedConfig);
+    normalizeContentTypes(config.menus);
     collapsedNodes.clear();
     collapseTextItems(config.menus);
     generalTitle.value = config.generalTitle;
@@ -135,6 +267,7 @@ async function load() {
   const data = await chrome.storage.local.get(["config", "helpSeen"]);
   config = data.config || structuredClone(DEFAULT_CONFIG);
   config.generalTitle ||= "Menus de Texto";
+  normalizeContentTypes(config.menus);
   generalTitle.value = config.generalTitle;
   collapseTextItems(config.menus);
   render();
@@ -169,7 +302,7 @@ function newMenu(title = "Novo menu") {
 }
 
 function newItem(title = "Novo texto", text = "") {
-  return { id: id(), title, type: "item", text };
+  return { id: id(), title, type: "item", contentType: "text", text };
 }
 
 function render() {
@@ -206,13 +339,16 @@ function renderNode(node) {
   moveUp.addEventListener("click", () => moveNode(node.id, -1));
   moveDown.addEventListener("click", () => moveNode(node.id, 1));
 
-  el.querySelector(".collapse").addEventListener("click", event => {
-    const collapsed = el.classList.toggle("collapsed");
-    if (collapsed) collapsedNodes.add(node.id);
-    else collapsedNodes.delete(node.id);
-    event.currentTarget.title = collapsed ? "Expandir" : "Minimizar";
-    event.currentTarget.setAttribute("aria-label", event.currentTarget.title);
-  });
+  const collapse = el.querySelector(".collapse");
+  if (collapse) {
+    collapse.addEventListener("click", event => {
+      const collapsed = el.classList.toggle("collapsed");
+      if (collapsed) collapsedNodes.add(node.id);
+      else collapsedNodes.delete(node.id);
+      event.currentTarget.title = collapsed ? "Expandir" : "Minimizar";
+      event.currentTarget.setAttribute("aria-label", event.currentTarget.title);
+    });
+  }
 
   el.querySelector(".delete").addEventListener("click", () => {
     if (!confirm(`Apagar "${node.title}"?`)) return;
@@ -224,13 +360,13 @@ function renderNode(node) {
   });
 
   if (node.type === "item") {
-    const text = el.querySelector(".text-input");
-    text.value = node.text || "";
-
-    text.addEventListener("input", () => {
-      node.text = text.value;
-      scheduleSave();
-    });
+    const badge = el.querySelector(".content-type-badge");
+    badge.textContent = node.contentType === "html" ? "HTML" : "TEXTO";
+    badge.classList.toggle("html", node.contentType === "html");
+    const preview = el.querySelector(".content-preview");
+    preview.textContent = contentSummary(node);
+    preview.title = preview.textContent;
+    el.querySelector(".edit-content").addEventListener("click", () => openContentEditor(node));
   } else {
     const children = el.querySelector(".children");
 
@@ -451,6 +587,7 @@ document
     }
 
     config = structuredClone(DEFAULT_CONFIG);
+    normalizeContentTypes(config.menus);
     save();
     render();
   });
@@ -464,6 +601,73 @@ helpDialog.addEventListener("cancel", event => {
   event.preventDefault();
   closeHelp();
 });
+
+document.getElementById("plainMode").addEventListener("click", () => {
+  if (editorMode === "html" && !plainEditor.value) {
+    const template = document.createElement("template");
+    template.innerHTML = sanitizeHtml(htmlView === "source" ? sourceEditor.value : visualEditor.innerHTML);
+    plainEditor.value = template.content.textContent || "";
+  }
+  setEditorMode("text");
+});
+
+document.getElementById("htmlMode").addEventListener("click", () => {
+  if (editorMode === "text" && !visualEditor.innerHTML && plainEditor.value) {
+    const escaped = document.createElement("div");
+    escaped.textContent = plainEditor.value;
+    const html = escaped.innerHTML.replace(/\r?\n/g, "<br>");
+    visualEditor.innerHTML = html;
+    sourceEditor.value = html;
+  }
+  setEditorMode("html");
+});
+
+document.getElementById("visualTab").addEventListener("click", () => setHtmlView("visual"));
+document.getElementById("sourceTab").addEventListener("click", () => setHtmlView("source"));
+
+document.querySelectorAll(".format-toolbar [data-command]").forEach(button => {
+  button.addEventListener("click", () => {
+    visualEditor.focus();
+    document.execCommand(button.dataset.command, false);
+    editorDirty = true;
+  });
+});
+
+document.querySelectorAll(".format-toolbar [data-block]").forEach(button => {
+  button.addEventListener("click", () => {
+    visualEditor.focus();
+    document.execCommand("formatBlock", false, button.dataset.block);
+    editorDirty = true;
+  });
+});
+
+document.getElementById("createLink").addEventListener("click", () => {
+  const url = prompt("Endereço da ligação (https://...):");
+  if (!url) return;
+  if (!/^(https?:|mailto:|tel:|#)/i.test(url)) {
+    alert("Use um endereço iniciado por https://, http://, mailto: ou tel:.");
+    return;
+  }
+  visualEditor.focus();
+  document.execCommand("createLink", false, url);
+  editorDirty = true;
+});
+
+[plainEditor, visualEditor, sourceEditor].forEach(editor => {
+  editor.addEventListener("input", () => {
+    editorDirty = true;
+    editorStatus.textContent = "Alterações por guardar";
+  });
+});
+
+document.getElementById("closeEditor").addEventListener("click", closeContentEditor);
+document.getElementById("cancelEditor").addEventListener("click", closeContentEditor);
+document.getElementById("saveEditor").addEventListener("click", saveContentEditor);
+contentEditor.addEventListener("cancel", event => {
+  event.preventDefault();
+  closeContentEditor();
+});
+
 backupFile.addEventListener("change", () => {
   const [file] = backupFile.files;
   if (file) importBackup(file);

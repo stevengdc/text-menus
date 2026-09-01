@@ -79,16 +79,67 @@
     <div class="node item-node">
       <div class="node-main">
         <span class="drag" title="Arrastar">☷</span>
-        <button class="collapse icon-button" title="Minimizar texto" aria-label="Minimizar texto">▾</button>
         <input class="title-input" placeholder="Nome do item">
-        <span class="type-badge item-badge">TEXTO / HTML</span>
+        <span class="type-badge item-badge content-type-badge">TEXTO</span>
+        <span class="content-preview" title="Resumo do conteúdo"></span>
+        <button class="edit-content small primary">Editar conteúdo</button>
         <button class="move-up icon-button" title="Mover para cima" aria-label="Mover para cima">↑</button>
         <button class="move-down icon-button" title="Mover para baixo" aria-label="Mover para baixo">↓</button>
         <button class="delete small danger">Apagar</button>
       </div>
-      <textarea class="text-input" rows="5" placeholder="Texto normal ou HTML, por exemplo: <p>Olá <strong>João</strong></p>"></textarea>
     </div>
   </template>
+
+  <dialog id="contentEditor" class="editor-dialog" aria-labelledby="editorTitle">
+    <div class="dialog-header">
+      <div>
+        <h2 id="editorTitle">Editar conteúdo</h2>
+        <p id="editorItemName" class="editor-item-name"></p>
+      </div>
+      <button id="closeEditor" class="icon-button" aria-label="Fechar editor" title="Fechar">×</button>
+    </div>
+    <div class="editor-body">
+      <div class="content-mode" role="group" aria-label="Tipo de conteúdo">
+        <span>Tipo de conteúdo</span>
+        <button id="plainMode" class="mode-button">Texto simples</button>
+        <button id="htmlMode" class="mode-button">HTML formatado</button>
+      </div>
+      <section id="plainEditorPanel" class="editor-panel">
+        <label for="plainEditor">Texto a inserir</label>
+        <textarea id="plainEditor" rows="16" placeholder="Escreva aqui o texto que será inserido..."></textarea>
+      </section>
+      <section id="htmlEditorPanel" class="editor-panel" hidden>
+        <div class="editor-tabs" role="tablist" aria-label="Modo de edição HTML">
+          <button id="visualTab" class="editor-tab active" role="tab" aria-selected="true">Editor visual</button>
+          <button id="sourceTab" class="editor-tab" role="tab" aria-selected="false">Código-fonte</button>
+        </div>
+        <div id="visualPanel">
+          <div class="format-toolbar" role="toolbar" aria-label="Formatação de texto">
+            <button data-command="bold" title="Negrito"><strong>B</strong></button>
+            <button data-command="italic" title="Itálico"><em>I</em></button>
+            <button data-command="underline" title="Sublinhado"><u>U</u></button>
+            <button data-command="insertUnorderedList" title="Lista com marcadores">• Lista</button>
+            <button data-command="insertOrderedList" title="Lista numerada">1. Lista</button>
+            <button data-block="p" title="Parágrafo">Parágrafo</button>
+            <button data-block="h2" title="Título">Título</button>
+            <button id="createLink" title="Adicionar ligação">Ligação</button>
+          </div>
+          <div id="visualEditor" class="visual-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Escreva e formate o conteúdo..."></div>
+        </div>
+        <div id="sourcePanel" hidden>
+          <label for="sourceEditor">Código HTML</label>
+          <textarea id="sourceEditor" class="source-editor" rows="18" spellcheck="false" placeholder="<p>Escreva aqui o HTML...</p>"></textarea>
+        </div>
+      </section>
+    </div>
+    <div class="editor-footer">
+      <span id="editorStatus" class="editor-status" role="status"></span>
+      <div class="editor-actions">
+        <button id="cancelEditor">Cancelar</button>
+        <button id="saveEditor" class="primary">Guardar conteúdo</button>
+      </div>
+    </div>
+  </dialog>
 
   <div id="toast" class="toast" role="status"></div>
   <script src="options.js"></script>
