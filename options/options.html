@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Menus de Texto — Configuração</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Menus de Texto</h1>
+      <p>Crie menus, submenus e snippets de texto ou HTML.</p>
+    </div>
+    <div class="header-actions">
+      <button id="addRootMenu" class="primary">+ Novo menu</button>
+      <button id="exportBackup">Exportar backup</button>
+      <button id="importBackup">Importar backup</button>
+      <input id="backupFile" type="file" accept="application/json,.json" hidden>
+      <button id="reset" class="danger-outline">Repor exemplos</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="help">
+      <strong>Texto e HTML:</strong> Pode guardar texto normal ou HTML diretamente no snippet. Em editores rich-text, tags como &lt;p&gt;, &lt;br&gt;, &lt;strong&gt;, links e tabelas são inseridas como HTML.<br><br><strong>Como usar:</strong>
+      depois de guardar uma alteração, clique com o botão direito numa página e
+      abra <em>Menus de Texto</em>. Os itens finais inserem o texto no campo onde
+      está o cursor.
+    </section>
+
+    <section class="general-settings">
+      <label for="generalTitle">Nome do menu de contexto</label>
+      <input id="generalTitle" class="title-input" placeholder="Menus de Texto">
+      <span class="field-hint">Este é o nome que aparece primeiro ao clicar com o botão direito.</span>
+    </section>
+
+    <section class="backup-info">
+      <strong>Backup:</strong> exporte todos os menus e textos para um ficheiro JSON.
+      Ao importar, a configuração atual é substituída depois de validar e confirmar o ficheiro.
+    </section>
+
+    <div id="rootDropZone" class="root-drop-zone">
+      ↑ Largar aqui para mover para o nível principal
+    </div>
+
+    <section id="tree" class="tree"></section>
+
+    <div id="empty" class="empty" hidden>
+      Ainda não existem menus. Clique em <strong>+ Novo menu</strong> para começar.
+    </div>
+  </main>
+
+  <template id="menuTemplate">
+    <div class="node menu-node">
+      <div class="node-main">
+        <span class="drag" title="Arrastar">☷</span>
+        <button class="collapse icon-button" title="Minimizar menu" aria-label="Minimizar menu">▾</button>
+        <input class="title-input" placeholder="Nome do menu">
+        <span class="type-badge">MENU</span>
+        <button class="move-up icon-button" title="Mover para cima" aria-label="Mover para cima">↑</button>
+        <button class="move-down icon-button" title="Mover para baixo" aria-label="Mover para baixo">↓</button>
+        <button class="add-submenu small">+ Submenu</button>
+        <button class="add-item small">+ Texto/HTML</button>
+        <button class="delete small danger">Apagar</button>
+      </div>
+      <div class="children"></div>
+    </div>
+  </template>
+
+  <template id="itemTemplate">
+    <div class="node item-node">
+      <div class="node-main">
+        <span class="drag" title="Arrastar">☷</span>
+        <button class="collapse icon-button" title="Minimizar texto" aria-label="Minimizar texto">▾</button>
+        <input class="title-input" placeholder="Nome do item">
+        <span class="type-badge item-badge">TEXTO / HTML</span>
+        <button class="move-up icon-button" title="Mover para cima" aria-label="Mover para cima">↑</button>
+        <button class="move-down icon-button" title="Mover para baixo" aria-label="Mover para baixo">↓</button>
+        <button class="delete small danger">Apagar</button>
+      </div>
+      <textarea class="text-input" rows="5" placeholder="Texto normal ou HTML, por exemplo: <p>Olá <strong>João</strong></p>"></textarea>
+    </div>
+  </template>
+
+  <div id="toast" class="toast" role="status"></div>
+  <script src="options.js"></script>
+</body>
+</html>
