@@ -14,30 +14,19 @@
     </div>
     <div class="header-actions">
       <button id="addRootMenu" class="primary">+ Novo menu</button>
-      <button id="exportBackup">Exportar backup</button>
-      <button id="importBackup">Importar backup</button>
+      <button id="exportBackup" title="Guardar todos os menus e textos num ficheiro JSON">Exportar backup</button>
+      <button id="importBackup" title="Substituir a configuração atual por um backup JSON validado">Importar backup</button>
       <input id="backupFile" type="file" accept="application/json,.json" hidden>
+      <button id="openHelp" title="Abrir instruções de utilização">Ajuda</button>
       <button id="reset" class="danger-outline">Repor exemplos</button>
     </div>
   </header>
 
   <main>
-    <section class="help">
-      <strong>Texto e HTML:</strong> Pode guardar texto normal ou HTML diretamente no snippet. Em editores rich-text, tags como &lt;p&gt;, &lt;br&gt;, &lt;strong&gt;, links e tabelas são inseridas como HTML.<br><br><strong>Como usar:</strong>
-      depois de guardar uma alteração, clique com o botão direito numa página e
-      abra <em>Menus de Texto</em>. Os itens finais inserem o texto no campo onde
-      está o cursor.
-    </section>
-
     <section class="general-settings">
       <label for="generalTitle">Nome do menu de contexto</label>
       <input id="generalTitle" class="title-input" placeholder="Menus de Texto">
       <span class="field-hint">Este é o nome que aparece primeiro ao clicar com o botão direito.</span>
-    </section>
-
-    <section class="backup-info">
-      <strong>Backup:</strong> exporte todos os menus e textos para um ficheiro JSON.
-      Ao importar, a configuração atual é substituída depois de validar e confirmar o ficheiro.
     </section>
 
     <div id="rootDropZone" class="root-drop-zone">
@@ -50,6 +39,24 @@
       Ainda não existem menus. Clique em <strong>+ Novo menu</strong> para começar.
     </div>
   </main>
+
+  <dialog id="helpDialog" aria-labelledby="helpTitle">
+    <div class="dialog-header">
+      <h2 id="helpTitle">Ajuda — Menus de Texto</h2>
+      <button id="closeHelp" class="icon-button" aria-label="Fechar ajuda" title="Fechar">×</button>
+    </div>
+    <div class="dialog-content">
+      <h3>Texto e HTML</h3>
+      <p>Pode guardar texto normal ou HTML diretamente no snippet. Em editores rich-text, tags como &lt;p&gt;, &lt;br&gt;, &lt;strong&gt;, links e tabelas são inseridas como HTML.</p>
+      <h3>Como usar</h3>
+      <p>Depois de guardar uma alteração, clique com o botão direito numa página e abra <em>Menus de Texto</em>. Os itens finais inserem o texto no campo onde está o cursor.</p>
+      <h3>Backups</h3>
+      <p><strong>Exportar backup</strong> guarda todos os menus e textos num ficheiro JSON. <strong>Importar backup</strong> valida o ficheiro e pede confirmação antes de substituir a configuração atual.</p>
+    </div>
+    <div class="dialog-actions">
+      <button id="confirmHelp" class="primary">Entendido</button>
+    </div>
+  </dialog>
 
   <template id="menuTemplate">
     <div class="node menu-node">

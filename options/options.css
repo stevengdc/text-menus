@@ -8,10 +8,10 @@
 body { margin: 0; min-width: 720px; background: #f6f7f9; }
 header {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 24px; padding: 28px 36px; background: white;
+  gap: 18px; padding: 16px 28px; background: white;
   border-bottom: 1px solid #e3e5e8; position: sticky; top: 0; z-index: 10;
 }
-h1 { margin: 0 0 6px; font-size: 26px; }
+h1 { margin: 0 0 3px; font-size: 23px; }
 p { margin: 0; color: #5f6368; }
 .header-actions { display: flex; gap: 10px; flex-shrink: 0; }
 button {
@@ -23,11 +23,7 @@ button.primary { background: #1a73e8; color: white; border-color: #1a73e8; }
 button.primary:hover { background: #1769d2; }
 button.danger { color: #c5221f; }
 button.danger-outline { color: #c5221f; }
-main { max-width: 1100px; margin: 0 auto; padding: 24px 28px 60px; }
-.help {
-  background: #e8f0fe; border: 1px solid #c6dafc; padding: 14px 16px;
-  border-radius: 9px; margin-bottom: 20px; line-height: 1.45;
-}
+main { max-width: 1100px; margin: 0 auto; padding: 18px 28px 60px; }
 .general-settings {
   display: grid; grid-template-columns: max-content minmax(240px, 1fr); align-items: center;
   gap: 7px 14px; padding: 16px; margin-bottom: 20px; background: white;
@@ -35,10 +31,20 @@ main { max-width: 1100px; margin: 0 auto; padding: 24px 28px 60px; }
 }
 .general-settings label { font-weight: 700; }
 .general-settings .field-hint { grid-column: 2; color: #5f6368; font-size: 12px; }
-.backup-info {
-  margin-bottom: 20px; padding: 14px 16px; color: #3c4043; background: white;
-  border: 1px solid #dadce0; border-radius: 9px; line-height: 1.45;
+dialog {
+  width: min(620px, calc(100vw - 40px)); padding: 0; color: #202124;
+  border: 0; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.25);
 }
+dialog::backdrop { background: rgba(32,33,36,.48); }
+.dialog-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 20px; border-bottom: 1px solid #e3e5e8;
+}
+.dialog-header h2 { margin: 0; font-size: 20px; }
+.dialog-content { padding: 18px 20px 8px; line-height: 1.5; }
+.dialog-content h3 { margin: 0 0 5px; font-size: 15px; }
+.dialog-content p { margin: 0 0 18px; }
+.dialog-actions { display: flex; justify-content: flex-end; padding: 12px 20px 18px; }
 .tree { display: flex; flex-direction: column; gap: 10px; }
 .root-drop-zone {
   display: block; margin-bottom: 12px; padding: 12px; text-align: center;

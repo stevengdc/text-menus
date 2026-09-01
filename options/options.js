@@ -42,6 +42,7 @@ const toast = document.getElementById("toast");
 const generalTitle = document.getElementById("generalTitle");
 const rootDropZone = document.getElementById("rootDropZone");
 const backupFile = document.getElementById("backupFile");
+const helpDialog = document.getElementById("helpDialog");
 
 let config = null;
 let saveTimer = null;
@@ -131,12 +132,19 @@ async function importBackup(file) {
 }
 
 async function load() {
-  const data = await chrome.storage.local.get("config");
+  const data = await chrome.storage.local.get(["config", "helpSeen"]);
   config = data.config || structuredClone(DEFAULT_CONFIG);
   config.generalTitle ||= "Menus de Texto";
   generalTitle.value = config.generalTitle;
   collapseTextItems(config.menus);
   render();
+
+  if (!data.helpSeen) helpDialog.showModal();
+}
+
+async function closeHelp() {
+  helpDialog.close();
+  await chrome.storage.local.set({ helpSeen: true });
 }
 
 function collapseTextItems(nodes) {
@@ -449,6 +457,13 @@ document
 
 document.getElementById("exportBackup").addEventListener("click", exportBackup);
 document.getElementById("importBackup").addEventListener("click", () => backupFile.click());
+document.getElementById("openHelp").addEventListener("click", () => helpDialog.showModal());
+document.getElementById("closeHelp").addEventListener("click", closeHelp);
+document.getElementById("confirmHelp").addEventListener("click", closeHelp);
+helpDialog.addEventListener("cancel", event => {
+  event.preventDefault();
+  closeHelp();
+});
 backupFile.addEventListener("change", () => {
   const [file] = backupFile.files;
   if (file) importBackup(file);
