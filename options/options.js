@@ -149,6 +149,29 @@ function contentSummary(node) {
   return node.text.trim().replace(/\s+/g, " ") || "Sem conteúdo";
 }
 
+function htmlToPlainText(value) {
+  const template = document.createElement("template");
+  template.innerHTML = sanitizeHtml(value);
+  template.content.querySelectorAll("br").forEach(element => element.replaceWith("\n"));
+  template.content.querySelectorAll("p, div, h1, h2, h3, li, blockquote, tr").forEach(element => {
+    element.append("\n");
+  });
+  return (template.content.textContent || "").replace(/\n{3,}/g, "\n\n").trimEnd();
+}
+
+function plainTextToHtml(value) {
+  const escaped = document.createElement("div");
+  escaped.textContent = value || "";
+  return escaped.innerHTML.replace(/\r?\n/g, "<br>");
+}
+
+function sanitizeConfigHtml(nodes) {
+  for (const node of nodes || []) {
+    if (node.type === "item" && node.contentType === "html") node.text = sanitizeHtml(node.text);
+    if (node.children) sanitizeConfigHtml(node.children);
+  }
+}
+
 function rememberVisualSelection() {
   const selection = window.getSelection();
   if (!selection?.rangeCount) return;
@@ -165,6 +188,7 @@ function restoreVisualSelection() {
 }
 
 function setEditorMode(mode) {
+  if (mode === editorMode) return;
   editorMode = mode;
   document.getElementById("plainMode").classList.toggle("active", mode === "text");
   document.getElementById("htmlMode").classList.toggle("active", mode === "html");
@@ -174,10 +198,12 @@ function setEditorMode(mode) {
 }
 
 function setHtmlView(view) {
-  if (view === "source") {
-    sourceEditor.value = sanitizeHtml(visualEditor.innerHTML);
-  } else {
-    visualEditor.innerHTML = sanitizeHtml(sourceEditor.value);
+  if (view !== htmlView) {
+    if (view === "source") {
+      sourceEditor.value = sanitizeHtml(visualEditor.innerHTML);
+    } else {
+      visualEditor.innerHTML = sanitizeHtml(sourceEditor.value);
+    }
   }
 
   htmlView = view;
@@ -196,9 +222,10 @@ function openContentEditor(node) {
   const html = node.contentType === "html" ? sanitizeHtml(node.text) : "";
   visualEditor.innerHTML = html;
   sourceEditor.value = html;
-  editorMode = node.contentType || "text";
+  const initialMode = node.contentType || "text";
+  editorMode = initialMode === "text" ? "html" : "text";
   editorDirty = false;
-  setEditorMode(editorMode);
+  setEditorMode(initialMode);
   editorDirty = false;
   setHtmlView("visual");
   editorStatus.textContent = "";
@@ -214,12 +241,20 @@ function closeContentEditor() {
 
 async function saveContentEditor() {
   if (!editingNode) return;
+  const previous = { contentType: editingNode.contentType, text: editingNode.text };
   editingNode.contentType = editorMode;
   editingNode.text = editorMode === "text"
     ? plainEditor.value
     : sanitizeHtml(htmlView === "source" ? sourceEditor.value : visualEditor.innerHTML);
+  const saved = await save();
+  if (!saved) {
+    editingNode.contentType = previous.contentType;
+    editingNode.text = previous.text;
+    editorDirty = true;
+    editorStatus.textContent = "Não foi possível guardar — reduza o tamanho das imagens.";
+    return;
+  }
   editorDirty = false;
-  await save();
   contentEditor.close();
   editingNode = null;
   render();
@@ -274,6 +309,7 @@ function exportBackup() {
 }
 
 async function importBackup(file) {
+  const previousConfig = structuredClone(config);
   try {
     const parsed = JSON.parse(await file.text());
     const importedConfig = parsed?.format === "menus-de-texto-backup" ? parsed.config : parsed;
@@ -287,13 +323,16 @@ async function importBackup(file) {
     clearTimeout(saveTimer);
     config = structuredClone(importedConfig);
     normalizeContentTypes(config.menus);
+    sanitizeConfigHtml(config.menus);
     collapsedNodes.clear();
     collapseTextItems(config.menus);
     generalTitle.value = config.generalTitle;
-    await save();
+    if (!(await save({ showError: false }))) throw new Error("O backup excede o espaço disponível.");
     render();
     notify("Backup importado");
   } catch (error) {
+    config = previousConfig;
+    generalTitle.value = config.generalTitle;
     alert(`Não foi possível importar o backup. ${error.message}`);
   } finally {
     backupFile.value = "";
@@ -324,14 +363,26 @@ function collapseTextItems(nodes) {
   }
 }
 
-async function save() {
-  await chrome.storage.local.set({ config });
-  notify("Guardado");
+async function save({ showError = true } = {}) {
+  try {
+    const bytes = new Blob([JSON.stringify({ config })]).size;
+    const quota = chrome.storage.local.QUOTA_BYTES;
+    if (quota && bytes > quota * 0.95) {
+      throw new Error("A configuração está demasiado grande. Remova ou reduza algumas imagens.");
+    }
+    await chrome.storage.local.set({ config });
+    notify("Guardado");
+    return true;
+  } catch (error) {
+    console.error("Não foi possível guardar a configuração.", error);
+    if (showError) alert(`Não foi possível guardar. ${error.message}`);
+    return false;
+  }
 }
 
 function scheduleSave() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(save, 250);
+  saveTimer = setTimeout(() => save(), 250);
 }
 
 function newMenu(title = "Novo menu") {
@@ -640,22 +691,16 @@ helpDialog.addEventListener("cancel", event => {
 });
 
 document.getElementById("plainMode").addEventListener("click", () => {
-  if (editorMode === "html" && !plainEditor.value) {
-    const template = document.createElement("template");
-    template.innerHTML = sanitizeHtml(htmlView === "source" ? sourceEditor.value : visualEditor.innerHTML);
-    plainEditor.value = template.content.textContent || "";
-  }
+  if (editorMode === "text") return;
+  plainEditor.value = htmlToPlainText(htmlView === "source" ? sourceEditor.value : visualEditor.innerHTML);
   setEditorMode("text");
 });
 
 document.getElementById("htmlMode").addEventListener("click", () => {
-  if (editorMode === "text" && !visualEditor.innerHTML && plainEditor.value) {
-    const escaped = document.createElement("div");
-    escaped.textContent = plainEditor.value;
-    const html = escaped.innerHTML.replace(/\r?\n/g, "<br>");
-    visualEditor.innerHTML = html;
-    sourceEditor.value = html;
-  }
+  if (editorMode === "html") return;
+  const html = plainTextToHtml(plainEditor.value);
+  visualEditor.innerHTML = html;
+  sourceEditor.value = html;
   setEditorMode("html");
 });
 
