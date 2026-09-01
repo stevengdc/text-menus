@@ -14,6 +14,8 @@ Extensão para Google Chrome que permite criar menus e submenus personalizados c
 - Ajuda integrada, apresentada na primeira utilização e acessível pelo botão **Ajuda**.
 - Árvore de menus compacta, com resumo e tipo de cada conteúdo.
 - Editor amplo para texto simples, HTML visual e código-fonte.
+- Barra de formatação agrupada com fonte, tamanho, cor, estilos, listas e alinhamento.
+- Inserção visual de tabelas e imagens locais até 2 MB.
 
 ## Instalação manual
 
@@ -54,4 +56,4 @@ Os dados são guardados localmente através de `chrome.storage.local`. A extens�
 
 ## Versão
 
-Versão 1.4.0 — inclui árvore compacta e um editor de conteúdo para texto simples, HTML visual e código-fonte.
+Versão 1.5.0 — inclui colunas alinhadas na árvore e uma barra de edição HTML avançada, inspirada em editores como o CKEditor.
