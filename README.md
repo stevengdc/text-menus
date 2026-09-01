@@ -12,6 +12,8 @@ Extensão para Google Chrome que permite criar menus e submenus personalizados c
 - Exportação e importação de um backup completo em formato JSON.
 - Página de configuração aberta automaticamente na primeira instalação.
 - Ajuda integrada, apresentada na primeira utilização e acessível pelo botão **Ajuda**.
+- Árvore de menus compacta, com resumo e tipo de cada conteúdo.
+- Editor amplo para texto simples, HTML visual e código-fonte.
 
 ## Instalação manual
 
@@ -52,4 +54,4 @@ Os dados são guardados localmente através de `chrome.storage.local`. A extens�
 
 ## Versão
 
-Versão 1.3.0 — inclui uma interface mais compacta, ajuda integrada e abertura automática da configuração na primeira instalação.
+Versão 1.4.0 — inclui árvore compacta e um editor de conteúdo para texto simples, HTML visual e código-fonte.
