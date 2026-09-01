@@ -10,6 +10,8 @@ Extensão para Google Chrome que permite criar menus e submenus personalizados c
 - Nome personalizável para o menu de contexto.
 - Gravação automática das alterações no armazenamento local do Chrome.
 - Exportação e importação de um backup completo em formato JSON.
+- Página de configuração aberta automaticamente na primeira instalação.
+- Ajuda integrada, apresentada na primeira utilização e acessível pelo botão **Ajuda**.
 
 ## Instalação manual
 
@@ -50,4 +52,4 @@ Os dados são guardados localmente através de `chrome.storage.local`. A extens�
 
 ## Versão
 
-Versão 1.2.0 — inclui importação e exportação de backups.
+Versão 1.3.0 — inclui uma interface mais compacta, ajuda integrada e abertura automática da configuração na primeira instalação.

@@ -136,7 +136,7 @@ async function insertTextIntoTab(tabId, frameId, text) {
   }
 }
 
-chrome.runtime.onInstalled.addListener(async () => {
+chrome.runtime.onInstalled.addListener(async details => {
   const data = await chrome.storage.local.get("config");
 
   if (!data.config) {
@@ -146,6 +146,10 @@ chrome.runtime.onInstalled.addListener(async () => {
   }
 
   await rebuildContextMenus();
+
+  if (details.reason === "install") {
+    await chrome.runtime.openOptionsPage();
+  }
 });
 
 chrome.runtime.onStartup.addListener(() => {
