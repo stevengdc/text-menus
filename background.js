@@ -156,6 +156,10 @@ chrome.runtime.onStartup.addListener(() => {
   rebuildContextMenus();
 });
 
+chrome.action.onClicked.addListener(() => {
+  chrome.runtime.openOptionsPage();
+});
+
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const config = await getConfig();
   const node = findNode(config.menus, info.menuItemId);

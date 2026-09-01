@@ -40,9 +40,59 @@
     return [...t.content.childNodes].some(n => n.nodeType === Node.ELEMENT_NODE);
   }
 
+  function sanitizeHTML(value) {
+    const allowed = new Set([
+      'P','BR','STRONG','B','EM','I','U','S','FONT','IMG','UL','OL','LI','A',
+      'BLOCKQUOTE','H1','H2','H3','DIV','SPAN','TABLE','THEAD','TBODY','TR','TH','TD'
+    ]);
+    const template = document.createElement('template');
+    template.innerHTML = String(value || '');
+
+    for (const element of [...template.content.querySelectorAll('*')]) {
+      if (!allowed.has(element.tagName)) {
+        element.replaceWith(...element.childNodes);
+        continue;
+      }
+
+      const attrs = Object.fromEntries([...element.attributes].map(attr => [attr.name, attr.value]));
+      for (const attr of [...element.attributes]) element.removeAttribute(attr.name);
+
+      if (element.tagName === 'A') {
+        if (/^(https?:|mailto:|tel:|#)/i.test(attrs.href || '')) element.setAttribute('href', attrs.href);
+        if (attrs.title) element.setAttribute('title', attrs.title.slice(0, 200));
+        element.setAttribute('target', '_blank');
+        element.setAttribute('rel', 'noopener noreferrer');
+      }
+
+      if (element.tagName === 'FONT') {
+        if (/^#[0-9a-f]{6}$/i.test(attrs.color || '')) element.setAttribute('color', attrs.color);
+        if (/^[\w -]{1,40}$/.test(attrs.face || '')) element.setAttribute('face', attrs.face);
+        if (/^[1-7]$/.test(attrs.size || '')) element.setAttribute('size', attrs.size);
+      }
+
+      if (element.tagName === 'IMG') {
+        const src = attrs.src || '';
+        if (/^https:\/\//i.test(src) || /^data:image\/(png|jpeg|gif|webp);base64,/i.test(src)) {
+          element.setAttribute('src', src);
+          element.setAttribute('alt', (attrs.alt || 'Imagem').slice(0, 200));
+        } else {
+          element.remove();
+          continue;
+        }
+      }
+
+      if (['P','DIV','H1','H2','H3','TH','TD'].includes(element.tagName)) {
+        const align = attrs.align || attrs.style?.match(/text-align\s*:\s*(left|center|right|justify)/i)?.[1];
+        if (/^(left|center|right|justify)$/i.test(align || '')) element.setAttribute('align', align.toLowerCase());
+      }
+    }
+
+    return template.innerHTML;
+  }
+
   function htmlToText(html) {
     const t = document.createElement('template');
-    t.innerHTML = html;
+    t.innerHTML = sanitizeHTML(html);
     return t.content.textContent || '';
   }
 
@@ -96,13 +146,14 @@
   function insertRich(el, value) {
     el.focus(); restoreRange(el);
     const html = looksLikeHTML(value);
+    const insertValue = html ? sanitizeHTML(value) : value;
     let ok = false;
-    try { ok = document.execCommand(html ? 'insertHTML' : 'insertText', false, value); } catch {}
-    if (!ok) ok = rangeInsert(el,value,html);
+    try { ok = document.execCommand(html ? 'insertHTML' : 'insertText', false, insertValue); } catch {}
+    if (!ok) ok = rangeInsert(el,insertValue,html);
     if (ok) {
       try {
         el.dispatchEvent(new InputEvent('input',{
-          bubbles:true, composed:true, inputType: html ? 'insertFromPaste' : 'insertText', data: html ? null : value
+          bubbles:true, composed:true, inputType: html ? 'insertFromPaste' : 'insertText', data: html ? null : insertValue
         }));
       } catch { el.dispatchEvent(new Event('input',{bubbles:true,composed:true})); }
       el.dispatchEvent(new Event('change',{bubbles:true,composed:true}));
