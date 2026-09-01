@@ -1,0 +1,8 @@
+# Backups exportados pela extensão podem conter informação privada.
+backups/*.json
+
+# Ficheiros do sistema operativo e do editor.
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
