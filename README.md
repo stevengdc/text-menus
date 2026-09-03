@@ -56,4 +56,4 @@ Os dados são guardados localmente através de `chrome.storage.local`. A extens�
 
 ## Versão
 
-Versão 1.5.1 — corrige a sincronização dos editores, reforça a segurança da importação HTML, controla o espaço ocupado por imagens e abre as opções ao clicar no ícone da extensão.
+Versão 1.5.2 — atualiza a identidade visual da extensão com um novo ícone em todos os tamanhos usados pelo Chrome.

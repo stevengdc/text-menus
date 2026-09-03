@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Menus de Texto",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "Menus e submenus para inserir texto e HTML, incluindo editores rich-text em frames como o Salesforce.",
   "permissions": [
     "contextMenus",
