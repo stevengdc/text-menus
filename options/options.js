@@ -40,6 +40,7 @@ const tree = document.getElementById("tree");
 const empty = document.getElementById("empty");
 const toast = document.getElementById("toast");
 const generalTitle = document.getElementById("generalTitle");
+const tinyMceLicenseKeyInput = document.getElementById("tinyMceLicenseKey");
 const rootDropZone = document.getElementById("rootDropZone");
 const backupFile = document.getElementById("backupFile");
 const helpDialog = document.getElementById("helpDialog");
@@ -61,7 +62,9 @@ let editingNode = null;
 let editorMode = "text";
 let htmlView = "visual";
 let editorDirty = false;
-let savedEditorRange = null;
+let tinyEditor = null;
+let tinyMceLicenseKey = "";
+let suppressTinyChange = false;
 
 function id() {
   return "node_" + crypto.randomUUID();
@@ -130,6 +133,30 @@ function sanitizeHtml(value) {
       }
     }
 
+    const safeStyles = [];
+    for (const declaration of String(attributes.style || "").split(";")) {
+      const [rawProperty, ...rawValue] = declaration.split(":");
+      const property = rawProperty?.trim().toLowerCase();
+      const styleValue = rawValue.join(":").trim();
+      const color = /^(#[0-9a-f]{3,8}|rgba?\([\d.,%\s]+\)|[a-z]{1,20})$/i;
+      if (["color", "background-color"].includes(property) && color.test(styleValue)) {
+        safeStyles.push(`${property}: ${styleValue}`);
+      } else if (property === "font-family" && /^[\w\s,'"-]{1,100}$/.test(styleValue)) {
+        safeStyles.push(`${property}: ${styleValue}`);
+      } else if (property === "font-size" && /^\d+(?:\.\d+)?(?:px|pt|em|rem|%)$/i.test(styleValue)) {
+        safeStyles.push(`${property}: ${styleValue}`);
+      } else if (property === "text-decoration" && /^(?:none|underline|line-through)(?:\s+(?:underline|line-through))?$/i.test(styleValue)) {
+        safeStyles.push(`${property}: ${styleValue}`);
+      } else if (property === "text-align" && /^(left|center|right|justify)$/i.test(styleValue)) {
+        safeStyles.push(`${property}: ${styleValue}`);
+      } else if (["width", "height"].includes(property) && /^\d+(?:\.\d+)?(?:px|%)$/i.test(styleValue)) {
+        safeStyles.push(`${property}: ${styleValue}`);
+      }
+    }
+    if (safeStyles.length && ["SPAN", "P", "DIV", "H1", "H2", "H3", "TH", "TD", "TABLE", "IMG"].includes(element.tagName)) {
+      element.setAttribute("style", safeStyles.join("; "));
+    }
+
     if (["P", "DIV", "H1", "H2", "H3", "TH", "TD"].includes(element.tagName)) {
       const aligned = attributes.align || attributes.style?.match(/text-align\s*:\s*(left|center|right|justify)/i)?.[1];
       if (/^(left|center|right|justify)$/i.test(aligned || "")) element.setAttribute("align", aligned.toLowerCase());
@@ -172,19 +199,72 @@ function sanitizeConfigHtml(nodes) {
   }
 }
 
-function rememberVisualSelection() {
-  const selection = window.getSelection();
-  if (!selection?.rangeCount) return;
-  const range = selection.getRangeAt(0);
-  if (visualEditor.contains(range.commonAncestorContainer)) savedEditorRange = range.cloneRange();
+function getVisualHtml() {
+  return tinyEditor ? tinyEditor.getContent() : visualEditor.value;
 }
 
-function restoreVisualSelection() {
-  visualEditor.focus();
-  if (!savedEditorRange) return;
-  const selection = window.getSelection();
-  selection.removeAllRanges();
-  selection.addRange(savedEditorRange);
+function setVisualHtml(value) {
+  const html = sanitizeHtml(value);
+  visualEditor.value = html;
+  if (tinyEditor) {
+    suppressTinyChange = true;
+    tinyEditor.setContent(html);
+    suppressTinyChange = false;
+  }
+}
+
+async function ensureTinyEditor() {
+  if (tinyEditor) return tinyEditor;
+  if (!window.tinymce) throw new Error("O TinyMCE local não foi carregado.");
+
+  const editors = await window.tinymce.init({
+    target: visualEditor,
+    base_url: chrome.runtime.getURL("vendor/tinymce"),
+    suffix: ".min",
+    license_key: tinyMceLicenseKey || "gpl",
+    language: "pt_PT",
+    language_url: chrome.runtime.getURL("vendor/tinymce/langs/pt_PT.js"),
+    plugins: "image link lists table",
+    menubar: "edit insert format table",
+    toolbar: "undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist | link table image | removeformat",
+    height: 380,
+    resize: true,
+    branding: false,
+    promotion: false,
+    convert_urls: false,
+    paste_data_images: true,
+    automatic_uploads: false,
+    content_style: "body { font-family: Arial, sans-serif; font-size: 14px; } table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid #9aa0a6; padding: 7px; } img { max-width: 100%; height: auto; }",
+    file_picker_types: "image",
+    file_picker_callback: callback => {
+      const picker = document.createElement("input");
+      picker.type = "file";
+      picker.accept = "image/png,image/jpeg,image/gif,image/webp";
+      picker.addEventListener("change", () => {
+        const [file] = picker.files || [];
+        if (!file) return;
+        if (file.size > 2 * 1024 * 1024) {
+          alert("A imagem deve ter no máximo 2 MB para não tornar o backup demasiado grande.");
+          return;
+        }
+        const reader = new FileReader();
+        reader.addEventListener("load", () => callback(reader.result, { alt: file.name }));
+        reader.readAsDataURL(file);
+      });
+      picker.click();
+    },
+    setup: editor => {
+      editor.on("input change undo redo", () => {
+        if (suppressTinyChange || !editingNode) return;
+        editorDirty = true;
+        editorStatus.textContent = "Alterações por guardar";
+      });
+    }
+  });
+
+  tinyEditor = editors[0] || null;
+  if (!tinyEditor) throw new Error("Não foi possível iniciar o TinyMCE.");
+  return tinyEditor;
 }
 
 function setEditorMode(mode) {
@@ -197,12 +277,13 @@ function setEditorMode(mode) {
   editorDirty = true;
 }
 
-function setHtmlView(view) {
+async function setHtmlView(view) {
   if (view !== htmlView) {
     if (view === "source") {
-      sourceEditor.value = sanitizeHtml(visualEditor.innerHTML);
+      sourceEditor.value = sanitizeHtml(getVisualHtml());
     } else {
-      visualEditor.innerHTML = sanitizeHtml(sourceEditor.value);
+      await ensureTinyEditor();
+      setVisualHtml(sourceEditor.value);
     }
   }
 
@@ -215,21 +296,35 @@ function setHtmlView(view) {
   document.getElementById("sourceTab").setAttribute("aria-selected", String(view === "source"));
 }
 
-function openContentEditor(node) {
+async function openContentEditor(node) {
   editingNode = node;
   editorItemName.textContent = node.title || "Texto sem nome";
   plainEditor.value = node.contentType === "text" ? node.text || "" : "";
   const html = node.contentType === "html" ? sanitizeHtml(node.text) : "";
-  visualEditor.innerHTML = html;
+  visualEditor.value = html;
   sourceEditor.value = html;
   const initialMode = node.contentType || "text";
   editorMode = initialMode === "text" ? "html" : "text";
   editorDirty = false;
   setEditorMode(initialMode);
   editorDirty = false;
-  setHtmlView("visual");
+  htmlView = "visual";
+  visualPanel.hidden = false;
+  sourcePanel.hidden = true;
+  document.getElementById("visualTab").classList.add("active");
+  document.getElementById("sourceTab").classList.remove("active");
   editorStatus.textContent = "";
   contentEditor.showModal();
+  if (initialMode === "html") {
+    try {
+      await ensureTinyEditor();
+      setVisualHtml(html);
+    } catch (error) {
+      console.error("Não foi possível iniciar o TinyMCE.", error);
+      editorStatus.textContent = "Editor visual indisponível — utilize o código-fonte.";
+      await setHtmlView("source");
+    }
+  }
 }
 
 function closeContentEditor() {
@@ -245,7 +340,7 @@ async function saveContentEditor() {
   editingNode.contentType = editorMode;
   editingNode.text = editorMode === "text"
     ? plainEditor.value
-    : sanitizeHtml(htmlView === "source" ? sourceEditor.value : visualEditor.innerHTML);
+    : sanitizeHtml(htmlView === "source" ? sourceEditor.value : getVisualHtml());
   const saved = await save();
   if (!saved) {
     editingNode.contentType = previous.contentType;
@@ -340,8 +435,10 @@ async function importBackup(file) {
 }
 
 async function load() {
-  const data = await chrome.storage.local.get(["config", "helpSeen"]);
+  const data = await chrome.storage.local.get(["config", "helpSeen", "tinyMceLicenseKey"]);
   config = data.config || structuredClone(DEFAULT_CONFIG);
+  tinyMceLicenseKey = typeof data.tinyMceLicenseKey === "string" ? data.tinyMceLicenseKey.trim() : "";
+  tinyMceLicenseKeyInput.value = tinyMceLicenseKey;
   config.generalTitle ||= "Menus de Texto";
   normalizeContentTypes(config.menus);
   generalTitle.value = config.generalTitle;
@@ -692,122 +789,56 @@ helpDialog.addEventListener("cancel", event => {
 
 document.getElementById("plainMode").addEventListener("click", () => {
   if (editorMode === "text") return;
-  plainEditor.value = htmlToPlainText(htmlView === "source" ? sourceEditor.value : visualEditor.innerHTML);
+  plainEditor.value = htmlToPlainText(htmlView === "source" ? sourceEditor.value : getVisualHtml());
   setEditorMode("text");
 });
 
-document.getElementById("htmlMode").addEventListener("click", () => {
+document.getElementById("htmlMode").addEventListener("click", async () => {
   if (editorMode === "html") return;
   const html = plainTextToHtml(plainEditor.value);
-  visualEditor.innerHTML = html;
   sourceEditor.value = html;
   setEditorMode("html");
+  try {
+    await ensureTinyEditor();
+    setVisualHtml(html);
+  } catch (error) {
+    console.error("Não foi possível iniciar o TinyMCE.", error);
+    editorStatus.textContent = "Editor visual indisponível — utilize o código-fonte.";
+    await setHtmlView("source");
+  }
 });
 
-document.getElementById("visualTab").addEventListener("click", () => setHtmlView("visual"));
+document.getElementById("visualTab").addEventListener("click", async () => {
+  try {
+    await setHtmlView("visual");
+  } catch (error) {
+    console.error("Não foi possível abrir o editor visual.", error);
+    editorStatus.textContent = "Editor visual indisponível — continue no código-fonte.";
+  }
+});
 document.getElementById("sourceTab").addEventListener("click", () => setHtmlView("source"));
 
-document.querySelectorAll(".format-toolbar [data-command]").forEach(button => {
-  button.addEventListener("click", () => {
-    restoreVisualSelection();
-    document.execCommand(button.dataset.command, false);
-    rememberVisualSelection();
-    editorDirty = true;
-  });
-});
-
-document.querySelectorAll(".format-toolbar [data-block]").forEach(button => {
-  button.addEventListener("click", () => {
-    restoreVisualSelection();
-    document.execCommand("formatBlock", false, button.dataset.block);
-    rememberVisualSelection();
-    editorDirty = true;
-  });
-});
-
-document.querySelectorAll(".format-toolbar button").forEach(button => {
-  button.addEventListener("mousedown", event => event.preventDefault());
-});
-
-document.getElementById("fontName").addEventListener("change", event => {
-  restoreVisualSelection();
-  document.execCommand("fontName", false, event.target.value);
-  editorDirty = true;
-});
-
-document.getElementById("fontSize").addEventListener("change", event => {
-  restoreVisualSelection();
-  document.execCommand("fontSize", false, event.target.value);
-  editorDirty = true;
-});
-
-document.getElementById("textColor").addEventListener("input", event => {
-  restoreVisualSelection();
-  document.execCommand("foreColor", false, event.target.value);
-  editorDirty = true;
-});
-
-document.getElementById("createLink").addEventListener("click", () => {
-  const url = prompt("Endereço da ligação (https://...):");
-  if (!url) return;
-  if (!/^(https?:|mailto:|tel:|#)/i.test(url)) {
-    alert("Use um endereço iniciado por https://, http://, mailto: ou tel:.");
-    return;
-  }
-  restoreVisualSelection();
-  document.execCommand("createLink", false, url);
-  rememberVisualSelection();
-  editorDirty = true;
-});
-
-document.getElementById("insertTable").addEventListener("click", () => {
-  const rows = Number(prompt("Número de linhas da tabela (1 a 10):", "2"));
-  if (!Number.isInteger(rows) || rows < 1 || rows > 10) return;
-  const columns = Number(prompt("Número de colunas da tabela (1 a 10):", "2"));
-  if (!Number.isInteger(columns) || columns < 1 || columns > 10) return;
-
-  const cells = () => `<tr>${"<td>&nbsp;</td>".repeat(columns)}</tr>`;
-  const table = `<table><tbody>${Array.from({ length: rows }, cells).join("")}</tbody></table><p><br></p>`;
-  restoreVisualSelection();
-  document.execCommand("insertHTML", false, table);
-  rememberVisualSelection();
-  editorDirty = true;
-});
-
-document.getElementById("insertImage").addEventListener("click", () => {
-  rememberVisualSelection();
-  document.getElementById("imageFile").click();
-});
-
-document.getElementById("imageFile").addEventListener("change", event => {
-  const [file] = event.target.files;
-  event.target.value = "";
-  if (!file) return;
-  if (file.size > 2 * 1024 * 1024) {
-    alert("A imagem deve ter no máximo 2 MB para não tornar o backup demasiado grande.");
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.addEventListener("load", () => {
-    restoreVisualSelection();
-    document.execCommand("insertImage", false, reader.result);
-    rememberVisualSelection();
-    editorDirty = true;
-    editorStatus.textContent = "Imagem inserida — alterações por guardar";
-  });
-  reader.readAsDataURL(file);
-});
-
-["mouseup", "keyup", "input"].forEach(eventName => {
-  visualEditor.addEventListener(eventName, rememberVisualSelection);
-});
-
-[plainEditor, visualEditor, sourceEditor].forEach(editor => {
+[plainEditor, sourceEditor].forEach(editor => {
   editor.addEventListener("input", () => {
     editorDirty = true;
     editorStatus.textContent = "Alterações por guardar";
   });
+});
+
+tinyMceLicenseKeyInput.addEventListener("change", async () => {
+  tinyMceLicenseKey = tinyMceLicenseKeyInput.value.trim();
+  await chrome.storage.local.set({ tinyMceLicenseKey });
+  if (tinyEditor) {
+    tinyEditor.remove();
+    tinyEditor = null;
+  }
+  notify(tinyMceLicenseKey ? "Chave TinyMCE guardada localmente" : "Modo GPL ativado");
+});
+
+document.getElementById("toggleTinyMceKey").addEventListener("click", event => {
+  const show = tinyMceLicenseKeyInput.type === "password";
+  tinyMceLicenseKeyInput.type = show ? "text" : "password";
+  event.currentTarget.textContent = show ? "Ocultar" : "Mostrar";
 });
 
 document.getElementById("closeEditor").addEventListener("click", closeContentEditor);

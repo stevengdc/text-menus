@@ -81,6 +81,30 @@
         }
       }
 
+      const safeStyles = [];
+      for (const declaration of String(attrs.style || '').split(';')) {
+        const [rawProperty, ...rawValue] = declaration.split(':');
+        const property = rawProperty?.trim().toLowerCase();
+        const styleValue = rawValue.join(':').trim();
+        const color = /^(#[0-9a-f]{3,8}|rgba?\([\d.,%\s]+\)|[a-z]{1,20})$/i;
+        if (['color', 'background-color'].includes(property) && color.test(styleValue)) {
+          safeStyles.push(`${property}: ${styleValue}`);
+        } else if (property === 'font-family' && /^[\w\s,'"-]{1,100}$/.test(styleValue)) {
+          safeStyles.push(`${property}: ${styleValue}`);
+        } else if (property === 'font-size' && /^\d+(?:\.\d+)?(?:px|pt|em|rem|%)$/i.test(styleValue)) {
+          safeStyles.push(`${property}: ${styleValue}`);
+        } else if (property === 'text-decoration' && /^(?:none|underline|line-through)(?:\s+(?:underline|line-through))?$/i.test(styleValue)) {
+          safeStyles.push(`${property}: ${styleValue}`);
+        } else if (property === 'text-align' && /^(left|center|right|justify)$/i.test(styleValue)) {
+          safeStyles.push(`${property}: ${styleValue}`);
+        } else if (['width', 'height'].includes(property) && /^\d+(?:\.\d+)?(?:px|%)$/i.test(styleValue)) {
+          safeStyles.push(`${property}: ${styleValue}`);
+        }
+      }
+      if (safeStyles.length && ['SPAN','P','DIV','H1','H2','H3','TH','TD','TABLE','IMG'].includes(element.tagName)) {
+        element.setAttribute('style', safeStyles.join('; '));
+      }
+
       if (['P','DIV','H1','H2','H3','TH','TD'].includes(element.tagName)) {
         const align = attrs.align || attrs.style?.match(/text-align\s*:\s*(left|center|right|justify)/i)?.[1];
         if (/^(left|center|right|justify)$/i.test(align || '')) element.setAttribute('align', align.toLowerCase());
