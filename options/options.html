@@ -27,12 +27,12 @@
       <label for="generalTitle">Nome do menu de contexto</label>
       <input id="generalTitle" class="title-input" placeholder="Menus de Texto">
       <span class="field-hint">Este é o nome que aparece primeiro ao clicar com o botão direito.</span>
-      <label for="tinyMceLicenseKey">Chave TinyMCE</label>
+      <label for="tinyMceApiKey">API key Tiny Cloud</label>
       <div class="secret-field">
-        <input id="tinyMceLicenseKey" type="password" autocomplete="off" placeholder="Opcional — T8LK:...">
+        <input id="tinyMceApiKey" type="password" autocomplete="off" placeholder="Opcional">
         <button id="toggleTinyMceKey" type="button" class="small">Mostrar</button>
       </div>
-      <span class="field-hint">Opcional: chave comercial self-hosted. Sem chave, o editor local utiliza a licença GPL. Uma API key do Tiny Cloud não é necessária.</span>
+      <span class="field-hint">Guardada apenas neste perfil. A extensão usa o TinyMCE local em modo GPL e não envia esta chave para o Tiny Cloud.</span>
     </section>
 
     <div id="rootDropZone" class="root-drop-zone">
@@ -55,7 +55,7 @@
       <h3>Texto e HTML</h3>
       <p>Pode guardar texto normal ou HTML diretamente no snippet. Em editores rich-text, tags como &lt;p&gt;, &lt;br&gt;, &lt;strong&gt;, links e tabelas são inseridas como HTML.</p>
       <h3>Editor TinyMCE</h3>
-      <p>O editor HTML funciona localmente em modo GPL. Se possuir uma licença comercial self-hosted, pode guardar a chave TinyMCE nas opções; a chave fica apenas neste perfil do Chrome e não é incluída nos backups.</p>
+      <p>O editor HTML funciona localmente em modo GPL. A API key fica apenas neste perfil do Chrome, não é enviada ao Tiny Cloud e não é incluída nos backups.</p>
       <h3>Como usar</h3>
       <p>Depois de guardar uma alteração, clique com o botão direito numa página e abra <em>Menus de Texto</em>. Os itens finais inserem o texto no campo onde está o cursor.</p>
       <h3>Backups</h3>

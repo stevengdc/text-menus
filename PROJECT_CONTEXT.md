@@ -26,7 +26,7 @@ A extensão foi pensada para ser simples para utilizadores menos técnicos. A p�
 
 ## Estado atual
 
-- Versão registada no `manifest.json`: **1.6.2**.
+- Versão registada no `manifest.json`: **1.6.3**.
 - Configuração guardada localmente através de `chrome.storage.local`.
 - Não existe servidor, conta de utilizador, telemetria nem envio externo dos textos.
 - A página de opções abre na primeira instalação e também ao clicar no ícone da extensão.
@@ -140,7 +140,7 @@ Os backups podem conter informação sensível escrita pelo utilizador. Nunca in
 - A extensão necessita de acesso às páginas para inserir conteúdo no campo ativo, incluindo editores em frames.
 - Manter compatibilidade com inputs, textareas, `contenteditable` e frames usados por aplicações como o Salesforce.
 - O editor ainda usa `document.execCommand` para comandos rich-text simples. Embora seja uma API antiga, permanece por compatibilidade; existe uma alternativa baseada em `Range` para a inserção de conteúdo.
-- O TinyMCE funciona localmente em modo GPL ou com uma chave comercial self-hosted opcional guardada separadamente em `chrome.storage.local`. A chave não pertence à configuração nem aos backups.
+- O TinyMCE funciona localmente em modo GPL. A API key Tiny Cloud opcional é guardada separadamente em `chrome.storage.local`, mas não é enviada nem utilizada como chave de licença; não pertence à configuração nem aos backups. O campo legado `tinyMceLicenseKey` é migrado para `tinyMceApiKey`.
 - Por causa das restrições CSP das extensões Manifest V3, não adicionar JavaScript remoto, bibliotecas por CDN nem código JavaScript inline. Qualquer dependência futura deve ficar empacotada localmente.
 
 ## Validação antes de publicar

@@ -17,7 +17,7 @@ Extensão para Google Chrome que permite criar menus e submenus personalizados c
 - Editor TinyMCE local para texto HTML, com alternativa de edição direta do código-fonte.
 - Barra de formatação com fonte, tamanho, cores, estilos, listas, alinhamento, ligações, tabelas e imagens.
 - Inserção visual de tabelas e imagens locais até 2 MB.
-- Campo opcional para uma chave comercial TinyMCE self-hosted; sem chave, é utilizado o modo GPL.
+- Campo opcional para guardar uma API key Tiny Cloud localmente; o editor empacotado funciona sempre em modo GPL e não envia a chave.
 
 ## Instalação manual
 
@@ -49,7 +49,7 @@ Na página de configuração existem duas opções:
 
 Os dados são guardados localmente através de `chrome.storage.local`. A extensão não envia os textos para serviços externos. O backup é um ficheiro JSON legível e pode conter informação sensível presente nos snippets; proteja-o em conformidade.
 
-O TinyMCE está incluído localmente na extensão e não é carregado a partir de uma CDN. A chave comercial opcional fica apenas no armazenamento local do perfil do Chrome e não é incluída nos backups.
+O TinyMCE está incluído localmente na extensão e não é carregado a partir de uma CDN. A API key opcional fica apenas no armazenamento local do perfil do Chrome, não é enviada ao Tiny Cloud e não é incluída nos backups.
 
 ## Permissões
 
@@ -60,4 +60,4 @@ O TinyMCE está incluído localmente na extensão e não é carregado a partir d
 
 ## Versão
 
-Versão 1.6.2 — corrige o identificador do idioma português utilizado pelo TinyMCE.
+Versão 1.6.3 — corrige o tratamento da API key Tiny Cloud, mantendo o editor local em modo GPL.

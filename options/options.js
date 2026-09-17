@@ -40,7 +40,7 @@ const tree = document.getElementById("tree");
 const empty = document.getElementById("empty");
 const toast = document.getElementById("toast");
 const generalTitle = document.getElementById("generalTitle");
-const tinyMceLicenseKeyInput = document.getElementById("tinyMceLicenseKey");
+const tinyMceApiKeyInput = document.getElementById("tinyMceApiKey");
 const rootDropZone = document.getElementById("rootDropZone");
 const backupFile = document.getElementById("backupFile");
 const helpDialog = document.getElementById("helpDialog");
@@ -63,7 +63,7 @@ let editorMode = "text";
 let htmlView = "visual";
 let editorDirty = false;
 let tinyEditor = null;
-let tinyMceLicenseKey = "";
+let tinyMceApiKey = "";
 let suppressTinyChange = false;
 
 function id() {
@@ -221,7 +221,7 @@ async function ensureTinyEditor() {
     target: visualEditor,
     base_url: chrome.runtime.getURL("vendor/tinymce"),
     suffix: ".min",
-    license_key: tinyMceLicenseKey || "gpl",
+    license_key: "gpl",
     language: "pt-PT",
     language_url: chrome.runtime.getURL("vendor/tinymce/langs/pt-PT.js"),
     plugins: "image link lists table",
@@ -435,10 +435,16 @@ async function importBackup(file) {
 }
 
 async function load() {
-  const data = await chrome.storage.local.get(["config", "helpSeen", "tinyMceLicenseKey"]);
+  const data = await chrome.storage.local.get(["config", "helpSeen", "tinyMceApiKey", "tinyMceLicenseKey"]);
   config = data.config || structuredClone(DEFAULT_CONFIG);
-  tinyMceLicenseKey = typeof data.tinyMceLicenseKey === "string" ? data.tinyMceLicenseKey.trim() : "";
-  tinyMceLicenseKeyInput.value = tinyMceLicenseKey;
+  tinyMceApiKey = typeof data.tinyMceApiKey === "string"
+    ? data.tinyMceApiKey.trim()
+    : typeof data.tinyMceLicenseKey === "string" ? data.tinyMceLicenseKey.trim() : "";
+  tinyMceApiKeyInput.value = tinyMceApiKey;
+  if (data.tinyMceLicenseKey !== undefined) {
+    await chrome.storage.local.set({ tinyMceApiKey });
+    await chrome.storage.local.remove("tinyMceLicenseKey");
+  }
   config.generalTitle ||= "Menus de Texto";
   normalizeContentTypes(config.menus);
   generalTitle.value = config.generalTitle;
@@ -828,19 +834,15 @@ document.getElementById("sourceTab").addEventListener("click", () => setHtmlView
   });
 });
 
-tinyMceLicenseKeyInput.addEventListener("change", async () => {
-  tinyMceLicenseKey = tinyMceLicenseKeyInput.value.trim();
-  await chrome.storage.local.set({ tinyMceLicenseKey });
-  if (tinyEditor) {
-    tinyEditor.remove();
-    tinyEditor = null;
-  }
-  notify(tinyMceLicenseKey ? "Chave TinyMCE guardada localmente" : "Modo GPL ativado");
+tinyMceApiKeyInput.addEventListener("change", async () => {
+  tinyMceApiKey = tinyMceApiKeyInput.value.trim();
+  await chrome.storage.local.set({ tinyMceApiKey });
+  notify(tinyMceApiKey ? "API key guardada localmente" : "API key removida");
 });
 
 document.getElementById("toggleTinyMceKey").addEventListener("click", event => {
-  const show = tinyMceLicenseKeyInput.type === "password";
-  tinyMceLicenseKeyInput.type = show ? "text" : "password";
+  const show = tinyMceApiKeyInput.type === "password";
+  tinyMceApiKeyInput.type = show ? "text" : "password";
   event.currentTarget.textContent = show ? "Ocultar" : "Mostrar";
 });
 
