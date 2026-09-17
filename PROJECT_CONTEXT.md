@@ -26,7 +26,7 @@ A extensão foi pensada para ser simples para utilizadores menos técnicos. A p�
 
 ## Estado atual
 
-- Versão registada no `manifest.json`: **1.6.1**.
+- Versão registada no `manifest.json`: **1.6.2**.
 - Configuração guardada localmente através de `chrome.storage.local`.
 - Não existe servidor, conta de utilizador, telemetria nem envio externo dos textos.
 - A página de opções abre na primeira instalação e também ao clicar no ícone da extensão.

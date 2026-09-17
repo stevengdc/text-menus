@@ -60,4 +60,4 @@ O TinyMCE está incluído localmente na extensão e não é carregado a partir d
 
 ## Versão
 
-Versão 1.6.1 — apresenta os menus e submenus minimizados ao abrir a página de configuração.
+Versão 1.6.2 — corrige o identificador do idioma português utilizado pelo TinyMCE.
