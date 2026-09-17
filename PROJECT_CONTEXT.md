@@ -26,7 +26,7 @@ A extensão foi pensada para ser simples para utilizadores menos técnicos. A p�
 
 ## Estado atual
 
-- Versão registada no `manifest.json`: **1.6.0**.
+- Versão registada no `manifest.json`: **1.6.1**.
 - Configuração guardada localmente através de `chrome.storage.local`.
 - Não existe servidor, conta de utilizador, telemetria nem envio externo dos textos.
 - A página de opções abre na primeira instalação e também ao clicar no ícone da extensão.
@@ -101,7 +101,7 @@ Regras importantes:
 
 ### Edição e gravação
 
-1. A árvore da página de opções permite criar, renomear, mover, reordenar e apagar nós.
+1. A árvore da página de opções permite criar, renomear, mover, reordenar e apagar nós; todos os menus e submenus começam minimizados em cada abertura da página.
 2. O conteúdo de um item abre num diálogo amplo, evitando aumentar a altura da árvore.
 3. É possível alternar entre texto simples e HTML; no modo HTML existem o editor TinyMCE visual e a vista de código-fonte.
 4. A barra TinyMCE inclui fonte, tamanho, cores, estilos, rasurado, listas, alinhamento, links, tabelas e imagens locais.

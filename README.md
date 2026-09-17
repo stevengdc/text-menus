@@ -13,6 +13,7 @@ Extensão para Google Chrome que permite criar menus e submenus personalizados c
 - Página de configuração aberta automaticamente na primeira instalação.
 - Ajuda integrada, apresentada na primeira utilização e acessível pelo botão **Ajuda**.
 - Árvore de menus compacta, com resumo e tipo de cada conteúdo.
+- Menus e submenus apresentados minimizados ao abrir a página de configuração.
 - Editor TinyMCE local para texto HTML, com alternativa de edição direta do código-fonte.
 - Barra de formatação com fonte, tamanho, cores, estilos, listas, alinhamento, ligações, tabelas e imagens.
 - Inserção visual de tabelas e imagens locais até 2 MB.
@@ -59,4 +60,4 @@ O TinyMCE está incluído localmente na extensão e não é carregado a partir d
 
 ## Versão
 
-Versão 1.6.0 — integra o editor HTML TinyMCE local, com formatação avançada, código-fonte e chave comercial opcional.
+Versão 1.6.1 — apresenta os menus e submenus minimizados ao abrir a página de configuração.

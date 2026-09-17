@@ -420,7 +420,7 @@ async function importBackup(file) {
     normalizeContentTypes(config.menus);
     sanitizeConfigHtml(config.menus);
     collapsedNodes.clear();
-    collapseTextItems(config.menus);
+    collapseAllMenus(config.menus);
     generalTitle.value = config.generalTitle;
     if (!(await save({ showError: false }))) throw new Error("O backup excede o espaço disponível.");
     render();
@@ -442,7 +442,7 @@ async function load() {
   config.generalTitle ||= "Menus de Texto";
   normalizeContentTypes(config.menus);
   generalTitle.value = config.generalTitle;
-  collapseTextItems(config.menus);
+  collapseAllMenus(config.menus);
   render();
 
   if (!data.helpSeen) helpDialog.showModal();
@@ -453,10 +453,10 @@ async function closeHelp() {
   await chrome.storage.local.set({ helpSeen: true });
 }
 
-function collapseTextItems(nodes) {
+function collapseAllMenus(nodes) {
   for (const node of nodes || []) {
-    if (node.type === "item") collapsedNodes.add(node.id);
-    if (node.children) collapseTextItems(node.children);
+    if (node.type === "menu") collapsedNodes.add(node.id);
+    if (node.children) collapseAllMenus(node.children);
   }
 }
 
@@ -526,6 +526,9 @@ function renderNode(node) {
 
   const collapse = el.querySelector(".collapse");
   if (collapse) {
+    const initiallyCollapsed = collapsedNodes.has(node.id);
+    collapse.title = initiallyCollapsed ? "Expandir" : "Minimizar";
+    collapse.setAttribute("aria-label", collapse.title);
     collapse.addEventListener("click", event => {
       const collapsed = el.classList.toggle("collapsed");
       if (collapsed) collapsedNodes.add(node.id);
